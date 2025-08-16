@@ -18,3 +18,4 @@ else
 fi
 
 cp build/app/outputs/flutter-apk/wealth-ninja-$RELEASE.apk ~/Downloads
+ls -l ~Downloads/wealth-ninja-$RELEASE.apk
