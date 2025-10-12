@@ -32,20 +32,3 @@ jobs:
         with:
           name: app-release
           path: app/build/outputs/apk/release/app-release.apk
-      - name: Notify Email
-        if: always()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: 'GitHub Job Status: ${{ job.status }} for ${{ github.repository }}'
-          to: your.recipient@example.com
-          from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
-          body: |
-            Job '${{ github.job }}' in workflow '${{ github.workflow }}' of repository '${{ github.repository }}' has status '${{ job.status }}'.
-            Full details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
