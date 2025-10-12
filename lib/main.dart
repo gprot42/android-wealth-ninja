@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'settings_service.dart';
 import 'home_screen.dart';
+
 // Asset types
 enum AssetType { stock, crypto, cash }
+
 // Asset model
 @HiveType(typeId: 0)
 class Asset extends HiveObject {
@@ -18,34 +20,62 @@ class Asset extends HiveObject {
   AssetType type;
   @HiveField(4)
   String currency;
-  Asset(this.symbol, this.quantity, this.buyPrice, this.type, this.currency);
+  @HiveField(5)
+  String? cashNote;
+
+  Asset(
+    this.symbol,
+    this.quantity,
+    this.buyPrice,
+    this.type,
+    this.currency, [
+    this.cashNote,
+  ]);
 }
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(AssetAdapter());
   await Hive.openBox<Asset>('watched_assets');
   await Hive.openBox<Asset>('portfolio_assets');
-  
+
   // Initialize settings service
   final settingsService = SettingsService();
   await settingsService.init();
-  
+
   runApp(const WealthNinjaApp());
 }
+
 class AssetAdapter extends TypeAdapter<Asset> {
   @override
   final int typeId = 0;
   @override
   Asset read(BinaryReader reader) {
+    final symbol = reader.readString();
+    final quantity = reader.readDouble();
+    final buyPrice = reader.readDouble();
+    final type = AssetType.values[reader.readInt()];
+    final currency = reader.readString();
+    String? cashNote;
+
+    if (reader.availableBytes > 0) {
+      final hasCashNote = reader.readBool();
+      if (hasCashNote && reader.availableBytes > 0) {
+        cashNote = reader.readString();
+      }
+    }
+
     return Asset(
-      reader.readString(),
-      reader.readDouble(),
-      reader.readDouble(),
-      AssetType.values[reader.readInt()],
-      reader.readString(),
+      symbol,
+      quantity,
+      buyPrice,
+      type,
+      currency,
+      cashNote,
     );
   }
+
   @override
   void write(BinaryWriter writer, Asset obj) {
     writer.writeString(obj.symbol);
@@ -53,8 +83,15 @@ class AssetAdapter extends TypeAdapter<Asset> {
     writer.writeDouble(obj.buyPrice);
     writer.writeInt(obj.type.index);
     writer.writeString(obj.currency);
+
+    final hasCashNote = (obj.cashNote?.isNotEmpty ?? false);
+    writer.writeBool(hasCashNote);
+    if (hasCashNote) {
+      writer.writeString(obj.cashNote!);
+    }
   }
 }
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -171,7 +208,7 @@ class _WealthNinjaAppState extends State<WealthNinjaApp> {
     }
 
     final String themeMode = _settingsService.getThemeMode();
-    
+
     return MaterialApp(
       title: 'Wealth Ninja',
       theme: ThemeData(

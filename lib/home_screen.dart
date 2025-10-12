@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -15,10 +16,11 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final SettingsService _settingsService = SettingsService();
-  
+
   @override
   void initState() {
     super.initState();
@@ -34,14 +36,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   void _showCurrencyDialog() {
     String currentCurrency = _settingsService.getBaseCurrency();
     String newCurrency = currentCurrency;
-    
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Change Base Currency'),
           content: TextField(
-            decoration: const InputDecoration(labelText: 'Currency (e.g., EUR)'),
+            decoration:
+                const InputDecoration(labelText: 'Currency (e.g., EUR)'),
             controller: TextEditingController(text: currentCurrency),
             onChanged: (val) => newCurrency = val.toUpperCase(),
           ),
@@ -224,7 +227,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'theme', child: Text('Switch Theme')),
-              const PopupMenuItem(value: 'currency', child: Text('Change Base Currency')),
+              const PopupMenuItem(
+                  value: 'currency', child: Text('Change Base Currency')),
               const PopupMenuItem(value: 'settings', child: Text('Settings')),
               const PopupMenuItem(value: 'about', child: Text('About')),
             ],
@@ -304,13 +308,14 @@ class _CryptoTrackerScreenState extends State<CryptoTrackerScreen> {
 
   Future<void> _updatePrices() async {
     if (_isLoading) return;
-    
+
     setState(() => _isLoading = true);
     await _fetchExchangeRates();
-    
+
     // Only update crypto assets
-    final cryptoAssets = _box.values.where((asset) => asset.type == AssetType.crypto);
-    
+    final cryptoAssets =
+        _box.values.where((asset) => asset.type == AssetType.crypto);
+
     for (var asset in cryptoAssets) {
       final priceInUsd = await _apiService.fetchCryptoPrice(asset.symbol);
       if (priceInUsd != null) {
@@ -318,7 +323,7 @@ class _CryptoTrackerScreenState extends State<CryptoTrackerScreen> {
         _currentPrices[asset.symbol] = priceInUsd / usdRate;
       }
     }
-    
+
     setState(() => _isLoading = false);
   }
 
@@ -352,7 +357,8 @@ class _CryptoTrackerScreenState extends State<CryptoTrackerScreen> {
             TextButton(
               onPressed: () {
                 if (symbol.isNotEmpty) {
-                  final asset = Asset(symbol, 1.0, 0.0, AssetType.crypto, 'USD');
+                  final asset =
+                      Asset(symbol, 1.0, 0.0, AssetType.crypto, 'USD');
                   _box.add(asset);
                   _updatePrices();
                   Navigator.pop(context);
@@ -371,28 +377,33 @@ class _CryptoTrackerScreenState extends State<CryptoTrackerScreen> {
     return Scaffold(
       body: Column(
         children: [
-          if (_isLoading)
-            const LinearProgressIndicator(),
+          if (_isLoading) const LinearProgressIndicator(),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: _box.listenable(),
               builder: (context, Box<Asset> box, _) {
-                final cryptoAssets = box.values.where((asset) => asset.type == AssetType.crypto).toList();
-                
+                final cryptoAssets = box.values
+                    .where((asset) => asset.type == AssetType.crypto)
+                    .toList()
+                  ..sort((a, b) =>
+                      a.symbol.toLowerCase().compareTo(b.symbol.toLowerCase()));
+
                 if (cryptoAssets.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.currency_bitcoin, size: 64, color: Colors.grey),
+                        Icon(Icons.currency_bitcoin,
+                            size: 64, color: Colors.grey),
                         SizedBox(height: 16),
                         Text('No cryptocurrencies added yet'),
-                        Text('Tap + to add your first crypto', style: TextStyle(color: Colors.grey)),
+                        Text('Tap + to add your first crypto',
+                            style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   );
                 }
-                
+
                 return RefreshIndicator(
                   onRefresh: _updatePrices,
                   child: ListView.builder(
@@ -477,13 +488,14 @@ class _StockTrackerScreenState extends State<StockTrackerScreen> {
 
   Future<void> _updatePrices() async {
     if (_isLoading) return;
-    
+
     setState(() => _isLoading = true);
     await _fetchExchangeRates();
-    
+
     // Only update stock assets
-    final stockAssets = _box.values.where((asset) => asset.type == AssetType.stock);
-    
+    final stockAssets =
+        _box.values.where((asset) => asset.type == AssetType.stock);
+
     for (var asset in stockAssets) {
       final priceInUsd = await _apiService.fetchStockPrice(asset.symbol);
       if (priceInUsd != null) {
@@ -491,7 +503,7 @@ class _StockTrackerScreenState extends State<StockTrackerScreen> {
         _currentPrices[asset.symbol] = priceInUsd / usdRate;
       }
     }
-    
+
     setState(() => _isLoading = false);
   }
 
@@ -520,7 +532,8 @@ class _StockTrackerScreenState extends State<StockTrackerScreen> {
             TextButton(
               onPressed: () {
                 if (symbol.isNotEmpty) {
-                  final asset = Asset(symbol.toUpperCase(), 1.0, 0.0, AssetType.stock, 'USD');
+                  final asset = Asset(
+                      symbol.toUpperCase(), 1.0, 0.0, AssetType.stock, 'USD');
                   _box.add(asset);
                   _updatePrices();
                   Navigator.pop(context);
@@ -539,14 +552,17 @@ class _StockTrackerScreenState extends State<StockTrackerScreen> {
     return Scaffold(
       body: Column(
         children: [
-          if (_isLoading)
-            const LinearProgressIndicator(),
+          if (_isLoading) const LinearProgressIndicator(),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: _box.listenable(),
               builder: (context, Box<Asset> box, _) {
-                final stockAssets = box.values.where((asset) => asset.type == AssetType.stock).toList();
-                
+                final stockAssets = box.values
+                    .where((asset) => asset.type == AssetType.stock)
+                    .toList()
+                  ..sort((a, b) =>
+                      a.symbol.toLowerCase().compareTo(b.symbol.toLowerCase()));
+
                 if (stockAssets.isEmpty) {
                   return const Center(
                     child: Column(
@@ -555,12 +571,13 @@ class _StockTrackerScreenState extends State<StockTrackerScreen> {
                         Icon(Icons.trending_up, size: 64, color: Colors.grey),
                         SizedBox(height: 16),
                         Text('No stocks added yet'),
-                        Text('Tap + to add your first stock', style: TextStyle(color: Colors.grey)),
+                        Text('Tap + to add your first stock',
+                            style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   );
                 }
-                
+
                 return RefreshIndicator(
                   onRefresh: _updatePrices,
                   child: ListView.builder(
@@ -598,23 +615,35 @@ class CompoundCalculatorScreen extends StatefulWidget {
   const CompoundCalculatorScreen({super.key});
 
   @override
-  State<CompoundCalculatorScreen> createState() => _CompoundCalculatorScreenState();
+  State<CompoundCalculatorScreen> createState() =>
+      _CompoundCalculatorScreenState();
 }
 
 class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
   final ApiService _apiService = ApiService();
   final SettingsService _settingsService = SettingsService();
 
-  final TextEditingController _amountController = TextEditingController(text: '1');
-  final TextEditingController _rateController = TextEditingController(text: '30');
-  final TextEditingController _yearsController = TextEditingController(text: '5');
+  final TextEditingController _amountController =
+      TextEditingController(text: '1');
+  final TextEditingController _rateController =
+      TextEditingController(text: '30');
+  final TextEditingController _yearsController =
+      TextEditingController(text: '5');
 
   String _selectedCurrency = 'BTC';
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _result;
 
-  final List<String> _currencies = ['BTC', 'ETH', 'MSTR', 'USD', 'CHF', 'GBP', 'PHP'];
+  final List<String> _currencies = [
+    'BTC',
+    'ETH',
+    'MSTR',
+    'USD',
+    'CHF',
+    'GBP',
+    'PHP'
+  ];
 
   int _cryptoDecimalPlaces = 2;
   StreamSubscription? _cryptoPrecisionSubscription;
@@ -702,7 +731,7 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
     return 6;
   }
 
-  Widget _buildResultLine(String label, String value) {
+  Widget _buildResultLine(String label, String value, Color textColor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -711,7 +740,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
+                color: textColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -721,7 +751,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: const TextStyle(
+              style: TextStyle(
+                color: textColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -731,7 +762,7 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
     );
   }
 
-  List<Widget> _buildResultSummaries() {
+  List<Widget> _buildResultSummaries(Color textColor, Color accentColor) {
     final result = _result!;
     final String type = result['type'] as String;
     final String currency = result['currency'] as String;
@@ -751,6 +782,7 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         _buildResultLine(
           'Quantity',
           '${_formatQuantity(quantity, currency)} $currency',
+          textColor,
         ),
       );
       details.add(
@@ -760,6 +792,7 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
             currentPriceUsd,
             decimalDigits: _suggestUsdDecimalDigits(currentPriceUsd),
           ),
+          textColor,
         ),
       );
       details.add(
@@ -769,18 +802,21 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
             futurePriceUsd,
             decimalDigits: _suggestUsdDecimalDigits(futurePriceUsd),
           ),
+          textColor,
         ),
       );
       details.add(
         _buildResultLine(
           'Current Value (USD)',
           _formatUsd(currentValueUsd),
+          textColor,
         ),
       );
       details.add(
         _buildResultLine(
           'Future Value (USD)',
           _formatUsd(futureValueUsd),
+          textColor,
         ),
       );
     } else if (type == 'fiat') {
@@ -793,24 +829,28 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         _buildResultLine(
           'Current Value',
           _formatCurrency(currentValueBase, currency),
+          textColor,
         ),
       );
       details.add(
         _buildResultLine(
           'Current USD Value',
           _formatUsd(currentValueUsd),
+          textColor,
         ),
       );
       details.add(
         _buildResultLine(
           'Future Value',
           _formatCurrency(futureValueBase, currency),
+          textColor,
         ),
       );
       details.add(
         _buildResultLine(
           'Future USD Equivalent',
           _formatUsd(futureValueUsd),
+          textColor,
         ),
       );
     } else {
@@ -820,12 +860,14 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         _buildResultLine(
           'Current Value',
           _formatCurrency(currentValue, currency),
+          textColor,
         ),
       );
       details.add(
         _buildResultLine(
           'Future Value',
           _formatCurrency(futureValue, currency),
+          textColor,
         ),
       );
     }
@@ -835,7 +877,7 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
       Text(
         'Assumes a ${rate.toStringAsFixed(2)}% CAGR over $years year${years == 1 ? '' : 's'}.',
         style: TextStyle(
-          color: Colors.green.shade900,
+          color: accentColor,
           fontStyle: FontStyle.italic,
         ),
       ),
@@ -1010,6 +1052,19 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
     final bool isStock = _isStock(_selectedCurrency);
     final bool isAsset = isCrypto || isStock;
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bool isDarkMode = theme.brightness == Brightness.dark;
+    final Color baseSurface = isDarkMode
+        ? colorScheme.surfaceContainerHighest
+        : colorScheme.surfaceContainerLow;
+    final Color resultBackground =
+        isDarkMode ? baseSurface.withValues(alpha: 0.6) : baseSurface;
+    final Color resultBorder =
+        colorScheme.outlineVariant.withValues(alpha: isDarkMode ? 0.4 : 0.7);
+    final Color resultTextColor = colorScheme.onSurface;
+    final Color resultAccentColor = colorScheme.primary;
+
     final String amountLabel = isAsset ? 'Quantity Owned' : 'Beginning Amount';
     final String? amountHelper = isAsset
         ? 'Number of ${isStock ? 'shares' : 'units'} currently held'
@@ -1034,7 +1089,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
                 border: const OutlineInputBorder(),
                 suffixText: isAsset ? null : _selectedCurrency,
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -1044,7 +1100,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
                 suffixText: '%',
                 border: OutlineInputBorder(),
               ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -1127,9 +1184,9 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: resultBackground,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(color: resultBorder),
                 ),
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1140,11 +1197,12 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green.shade900,
+                        color: resultAccentColor,
                       ),
                     ),
                     const SizedBox(height: 12),
-                    ..._buildResultSummaries(),
+                    ..._buildResultSummaries(
+                        resultTextColor, resultAccentColor),
                   ],
                 ),
               ),
@@ -1207,37 +1265,38 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
 
   Future<void> _updatePrices() async {
     if (_isLoading) return;
-    
+
     setState(() => _isLoading = true);
     await _fetchExchangeRates();
-    
+
     for (var asset in _box.values) {
       double? priceInUsd;
-      
+
       if (asset.type == AssetType.cash) {
         _currentPrices[asset.symbol] = 1.0;
         continue;
       }
-      
+
       if (asset.type == AssetType.stock) {
         priceInUsd = await _apiService.fetchStockPrice(asset.symbol);
       } else if (asset.type == AssetType.crypto) {
         priceInUsd = await _apiService.fetchCryptoPrice(asset.symbol);
       }
-      
+
       if (priceInUsd != null) {
         final usdRate = _exchangeRates['USD'] ?? 1.0;
         _currentPrices[asset.symbol] = priceInUsd / usdRate;
       }
     }
-    
+
     setState(() => _isLoading = false);
   }
 
   double _getAssetValue(Asset asset) {
     final rate = _exchangeRates[asset.currency] ?? 1.0;
     if (asset.type == AssetType.cash) return asset.quantity / rate;
-    final currentPrice = _currentPrices[asset.symbol] ?? (asset.buyPrice / rate);
+    final currentPrice =
+        _currentPrices[asset.symbol] ?? (asset.buyPrice / rate);
     return asset.quantity * currentPrice;
   }
 
@@ -1245,7 +1304,8 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
     if (asset.type == AssetType.cash) return 0.0;
     final currentPrice = _currentPrices[asset.symbol];
     if (currentPrice == null) return 0.0;
-    final buyPriceInBase = asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
+    final buyPriceInBase =
+        asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
     return (currentPrice - buyPriceInBase) * asset.quantity;
   }
 
@@ -1253,13 +1313,15 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
     if (asset.type == AssetType.cash) return 0.0;
     final currentPrice = _currentPrices[asset.symbol];
     if (currentPrice == null) return 0.0;
-    final buyPriceInBase = asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
+    final buyPriceInBase =
+        asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
     if (buyPriceInBase == 0) return 0.0;
     return ((currentPrice - buyPriceInBase) / buyPriceInBase) * 100;
   }
 
   List<PieChartSectionData> _generatePieSections(List<Asset> assets) {
-    final double totalValue = assets.map(_getAssetValue).fold(0.0, (prev, val) => prev + val);
+    final double totalValue =
+        assets.map(_getAssetValue).fold(0.0, (prev, val) => prev + val);
     const List<Color> colors = [
       Colors.blue,
       Colors.green,
@@ -1278,10 +1340,14 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
       final double percentage = totalValue > 0 ? (value / totalValue) * 100 : 0;
       final Color color = colors[i % colors.length];
       i++;
+      final labelSymbol =
+          asset.type == AssetType.cash && (asset.cashNote?.isNotEmpty ?? false)
+              ? '${asset.symbol} (${asset.cashNote})'
+              : asset.symbol;
       return PieChartSectionData(
         value: value,
         color: color,
-        title: '${percentage.toStringAsFixed(0)}%\n${asset.symbol}',
+        title: '${percentage.toStringAsFixed(0)}%\n$labelSymbol',
         radius: 50,
         titleStyle: const TextStyle(
           fontSize: 12,
@@ -1300,8 +1366,9 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
         final quantityController = TextEditingController();
         final buyPriceController = TextEditingController();
         final currencyController = TextEditingController(text: 'USD');
+        final cashNoteController = TextEditingController();
         AssetType type = AssetType.stock;
-        
+
         return AlertDialog(
           title: const Text('Add Portfolio Asset'),
           content: StatefulBuilder(
@@ -1331,19 +1398,36 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                     TextField(
                       controller: quantityController,
                       decoration: InputDecoration(
-                          labelText: type == AssetType.cash ? 'Amount' : 'Quantity'),
+                          labelText:
+                              type == AssetType.cash ? 'Amount' : 'Quantity'),
                       keyboardType: TextInputType.number,
                     ),
                     if (type != AssetType.cash)
                       TextField(
                         controller: buyPriceController,
-                        decoration: const InputDecoration(labelText: 'Buy Price (per unit)'),
+                        decoration: const InputDecoration(
+                            labelText: 'Buy Price (per unit)'),
                         keyboardType: TextInputType.number,
                       ),
                     TextField(
                       controller: currencyController,
-                      decoration: const InputDecoration(labelText: 'Currency (e.g., CHF)'),
+                      decoration: const InputDecoration(
+                          labelText: 'Currency (e.g., CHF)'),
                     ),
+                    if (type == AssetType.cash)
+                      TextField(
+                        controller: cashNoteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Comment (max 4 chars)',
+                          helperText: 'Optional',
+                          counterText: '',
+                        ),
+                        maxLength: 4,
+                        textCapitalization: TextCapitalization.characters,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(4),
+                        ],
+                      ),
                   ],
                 ),
               );
@@ -1364,9 +1448,14 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                 } else {
                   symbol = symbolController.text;
                 }
-                final quantity = double.tryParse(quantityController.text) ?? 0.0;
-                final buyPrice = double.tryParse(buyPriceController.text) ?? 0.0;
+                final quantity =
+                    double.tryParse(quantityController.text) ?? 0.0;
+                final buyPrice =
+                    double.tryParse(buyPriceController.text) ?? 0.0;
                 final currency = currencyController.text.toUpperCase();
+                final rawNote = cashNoteController.text.trim();
+                final normalizedNote =
+                    rawNote.isEmpty ? null : rawNote.toUpperCase();
                 if (symbol.isNotEmpty && quantity > 0) {
                   final asset = Asset(
                     symbol,
@@ -1374,6 +1463,7 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                     type == AssetType.cash ? 1.0 : buyPrice,
                     type,
                     currency,
+                    type == AssetType.cash ? normalizedNote : null,
                   );
                   _box.add(asset);
                   _updatePrices();
@@ -1390,11 +1480,15 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
 
   void _editAsset(Asset asset) {
     final symbolController = TextEditingController(text: asset.symbol);
-    final quantityController = TextEditingController(text: asset.quantity.toString());
-    final buyPriceController = TextEditingController(text: asset.buyPrice.toString());
+    final quantityController =
+        TextEditingController(text: asset.quantity.toString());
+    final buyPriceController =
+        TextEditingController(text: asset.buyPrice.toString());
     final currencyController = TextEditingController(text: asset.currency);
+    final cashNoteController =
+        TextEditingController(text: asset.cashNote ?? '');
     AssetType type = asset.type;
-    
+
     showDialog(
       context: context,
       builder: (context) {
@@ -1427,19 +1521,36 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                     TextField(
                       controller: quantityController,
                       decoration: InputDecoration(
-                          labelText: type == AssetType.cash ? 'Amount' : 'Quantity'),
+                          labelText:
+                              type == AssetType.cash ? 'Amount' : 'Quantity'),
                       keyboardType: TextInputType.number,
                     ),
                     if (type != AssetType.cash)
                       TextField(
                         controller: buyPriceController,
-                        decoration: const InputDecoration(labelText: 'Buy Price (per unit)'),
+                        decoration: const InputDecoration(
+                            labelText: 'Buy Price (per unit)'),
                         keyboardType: TextInputType.number,
                       ),
                     TextField(
                       controller: currencyController,
-                      decoration: const InputDecoration(labelText: 'Currency (e.g., CHF)'),
+                      decoration: const InputDecoration(
+                          labelText: 'Currency (e.g., CHF)'),
                     ),
+                    if (type == AssetType.cash)
+                      TextField(
+                        controller: cashNoteController,
+                        decoration: const InputDecoration(
+                          labelText: 'Comment (max 4 chars)',
+                          helperText: 'Optional',
+                          counterText: '',
+                        ),
+                        maxLength: 4,
+                        textCapitalization: TextCapitalization.characters,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(4),
+                        ],
+                      ),
                   ],
                 ),
               );
@@ -1460,9 +1571,14 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                 } else {
                   symbol = symbolController.text;
                 }
-                final quantity = double.tryParse(quantityController.text) ?? 0.0;
-                final buyPrice = double.tryParse(buyPriceController.text) ?? 0.0;
+                final quantity =
+                    double.tryParse(quantityController.text) ?? 0.0;
+                final buyPrice =
+                    double.tryParse(buyPriceController.text) ?? 0.0;
                 final currency = currencyController.text.toUpperCase();
+                final rawNote = cashNoteController.text.trim();
+                final normalizedNote =
+                    rawNote.isEmpty ? null : rawNote.toUpperCase();
                 if (symbol.isNotEmpty && quantity > 0) {
                   // Update the existing asset
                   asset.symbol = symbol;
@@ -1470,6 +1586,8 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                   asset.buyPrice = type == AssetType.cash ? 1.0 : buyPrice;
                   asset.type = type;
                   asset.currency = currency;
+                  asset.cashNote =
+                      type == AssetType.cash ? normalizedNote : null;
                   asset.save(); // Save the changes to Hive
                   _updatePrices();
                   Navigator.pop(context);
@@ -1486,17 +1604,20 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
   @override
   Widget build(BuildContext context) {
     final formatCurrency = NumberFormat.simpleCurrency(name: _baseCurrency);
-    
+
     return Scaffold(
       body: Column(
         children: [
-          if (_isLoading)
-            const LinearProgressIndicator(),
+          if (_isLoading) const LinearProgressIndicator(),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: _box.listenable(),
               builder: (context, Box<Asset> box, _) {
-                if (box.values.isEmpty) {
+                final assets = box.values.toList()
+                  ..sort((a, b) =>
+                      a.symbol.toLowerCase().compareTo(b.symbol.toLowerCase()));
+
+                if (assets.isEmpty) {
                   return const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1504,16 +1625,17 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                         Icon(Icons.pie_chart, size: 64, color: Colors.grey),
                         SizedBox(height: 16),
                         Text('Your portfolio is empty'),
-                        Text('Tap + to add your first asset', style: TextStyle(color: Colors.grey)),
+                        Text('Tap + to add your first asset',
+                            style: TextStyle(color: Colors.grey)),
                       ],
                     ),
                   );
                 }
-                
-                final double totalValue = box.values
+
+                final double totalValue = assets
                     .map((asset) => _getAssetValue(asset))
                     .fold(0.0, (prev, val) => prev + val);
-                
+
                 return RefreshIndicator(
                   onRefresh: _updatePrices,
                   child: Column(
@@ -1526,7 +1648,7 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                             children: [
                               PieChart(
                                 PieChartData(
-                                  sections: _generatePieSections(box.values.toList()),
+                                  sections: _generatePieSections(assets),
                                   centerSpaceRadius: 60,
                                   sectionsSpace: 2,
                                 ),
@@ -1555,18 +1677,24 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                         ),
                       Expanded(
                         child: ListView.builder(
-                          itemCount: box.length,
+                          itemCount: assets.length,
                           itemBuilder: (context, index) {
-                            final asset = box.getAt(index)!;
+                            final asset = assets[index];
                             final value = _getAssetValue(asset);
                             final profit = _getProfit(asset);
-                            final profitPercentage = _getProfitPercentage(asset);
-                            final profitColor = profit >= 0 ? Colors.green : Colors.red;
+                            final profitPercentage =
+                                _getProfitPercentage(asset);
+                            final profitColor =
+                                profit >= 0 ? Colors.green : Colors.red;
                             return ListTile(
-                              title: Text('${asset.symbol.toUpperCase()} (${asset.quantity})'),
+                              title: Text(
+                                '${asset.symbol.toUpperCase()}${asset.type == AssetType.cash && (asset.cashNote?.isNotEmpty ?? false) ? ' (${asset.cashNote})' : ''} (${asset.quantity})',
+                              ),
                               subtitle: Text(
                                 'Value: ${formatCurrency.format(value)}${asset.type != AssetType.cash ? '\nProfit: ${formatCurrency.format(profit)} (${profitPercentage >= 0 ? '+' : ''}${profitPercentage.toStringAsFixed(2)}%)' : ''}',
-                                style: asset.type != AssetType.cash ? TextStyle(color: profitColor) : null,
+                                style: asset.type != AssetType.cash
+                                    ? TextStyle(color: profitColor)
+                                    : null,
                               ),
                               isThreeLine: asset.type != AssetType.cash,
                               trailing: Row(
