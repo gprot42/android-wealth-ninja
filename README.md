@@ -77,6 +77,5 @@ Release builds are automatically copied to `~/Downloads/wealth-ninja-release.apk
 <p align="center">
   <img width="252" height="561" alt="Screenshot of the price tracker screen" src="https://github.com/user-attachments/assets/7c9bfdaf-351c-4158-9312-8d3fc0766159">
   <img width="252" height="561" alt="Screenshot of the portfolio tracker screen" src="https://github.com/user-attachments/assets/3f38723c-a974-468b-a476-6246e3134b8b">
-  <img width="252" height="561" alt="Screenshot of the compound calculator screen" src="https://github.com/user-attachments/assets/placeholder-calculator">
   <img width="252" height="561" alt="Screenshot of the settings screen" src="https://github.com/user-attachments/assets/899afbb6-7260-450c-a45e-379e3231422a">
 </p>
