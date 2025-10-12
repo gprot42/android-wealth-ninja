@@ -8,7 +8,7 @@
 
 * **Price Tracker:** Add stocks or cryptocurrencies to your watchlist to monitor their current prices, updated every minute.
 * **Portfolio Tracker:** Log your owned assets with details like quantity and purchase price. Instantly see your portfolio's total value, profits/losses, and an allocation pie chart.
-* **Compound Calculator:** Project future investment values using Compound Annual Growth Rate (CAGR) calculations. Supports multiple currencies and assets including USD, BTC, ETH, MSTR, CHF, GBP, and PHP with real-time price integration.
+* **Compound Calculator:** Project future investment values using Compound Annual Growth Rate (CAGR) calculations. Supports multiple currencies and assets including USD, CHF, GBP, BTC, ETH, MSTR with real-time price integration.
 * **Customization:** Switch between light and dark themes, change your preferred display currency (e.g., USD to EUR), and view an "About" page.
 * **Splash Screen:** A welcoming 3-second splash screen greets you on app launch before loading the main interface.
 
