@@ -1,5 +1,5 @@
-name: your_project_name
-description: "A new Flutter project."
+name: wealth_ninja
+description: "A wealth tracking Flutter app."
 publish_to: 'none'
 version: 1.0.0+1
 environment:
