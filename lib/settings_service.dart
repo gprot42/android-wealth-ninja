@@ -79,9 +79,18 @@ class SettingsService {
   String getPreferredCryptoAPI() {
     return _settingsBox.get('preferredCryptoAPI', defaultValue: 'coingecko') as String;
   }
-  
+
   Future<void> setPreferredCryptoAPI(String api) async {
     await _settingsBox.put('preferredCryptoAPI', api);
+  }
+
+  // Decimal places settings for crypto prices
+  int getCryptoDecimalPlaces() {
+    return _settingsBox.get('cryptoDecimalPlaces', defaultValue: 2) as int;
+  }
+
+  Future<void> setCryptoDecimalPlaces(int places) async {
+    await _settingsBox.put('cryptoDecimalPlaces', places);
   }
   
   // Clear all settings

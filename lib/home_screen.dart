@@ -138,6 +138,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       ],
                     ),
                   ),
+                  ListTile(
+                    title: const Text('Crypto Decimal Places'),
+                    trailing: DropdownButton<int>(
+                      value: _settingsService.getCryptoDecimalPlaces(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          _settingsService.setCryptoDecimalPlaces(value);
+                          setDialogState(() {});
+                        }
+                      },
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('0')),
+                        DropdownMenuItem(value: 1, child: Text('1')),
+                        DropdownMenuItem(value: 2, child: Text('2')),
+                        DropdownMenuItem(value: 3, child: Text('3')),
+                        DropdownMenuItem(value: 4, child: Text('4')),
+                        DropdownMenuItem(value: 5, child: Text('5')),
+                        DropdownMenuItem(value: 6, child: Text('6')),
+                      ],
+                    ),
+                  ),
                 ],
               );
             },
@@ -582,25 +603,355 @@ class CompoundCalculatorScreen extends StatefulWidget {
 
 class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
   final ApiService _apiService = ApiService();
-  final TextEditingController _amountController = TextEditingController(text: '1000');
+  final SettingsService _settingsService = SettingsService();
+
+  final TextEditingController _amountController = TextEditingController(text: '1');
   final TextEditingController _rateController = TextEditingController(text: '30');
   final TextEditingController _yearsController = TextEditingController(text: '5');
-  String _selectedCurrency = 'USD';
+
+  String _selectedCurrency = 'BTC';
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _result;
 
-  final List<String> _currencies = ['USD', 'BTC', 'ETH', 'MSTR', 'CHF', 'GBP', 'PHP'];
+  final List<String> _currencies = ['BTC', 'ETH', 'MSTR', 'USD', 'CHF', 'GBP', 'PHP'];
+
+  int _cryptoDecimalPlaces = 2;
+  StreamSubscription? _cryptoPrecisionSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _cryptoDecimalPlaces = _settingsService.getCryptoDecimalPlaces();
+    _cryptoPrecisionSubscription =
+        _settingsService.watchKey('cryptoDecimalPlaces').listen((_) {
+      if (!mounted) return;
+      setState(() {
+        _cryptoDecimalPlaces = _settingsService.getCryptoDecimalPlaces();
+      });
+    });
+  }
 
   @override
   void dispose() {
+    _cryptoPrecisionSubscription?.cancel();
     _amountController.dispose();
     _rateController.dispose();
     _yearsController.dispose();
     super.dispose();
   }
 
+  bool _isCrypto(String currency) => currency == 'BTC' || currency == 'ETH';
+
+  bool _isStock(String currency) => currency == 'MSTR';
+
+  double? _parseDouble(String input) {
+    final sanitized = input.trim().replaceAll(',', '');
+    if (sanitized.isEmpty) return null;
+    return double.tryParse(sanitized);
+  }
+
+  String _friendlyError(Object error) {
+    final message = error.toString();
+    return message.startsWith('Exception: ') ? message.substring(11) : message;
+  }
+
+  String _buildDecimalPattern(int digits) {
+    if (digits <= 0) {
+      return '#,##0';
+    }
+    return '#,##0.${List.filled(digits, '0').join()}';
+  }
+
+  String _formatQuantity(double value, String currency) {
+    final int digits =
+        _isCrypto(currency) ? _cryptoDecimalPlaces.clamp(0, 6) : 4;
+    final format = NumberFormat(_buildDecimalPattern(digits));
+    return format.format(value);
+  }
+
+  String _formatCurrency(double value, String currency) {
+    if (currency == 'USD') {
+      return _formatUsd(value);
+    }
+    final int digits = _isCrypto(currency) ? _cryptoDecimalPlaces : 2;
+    final formatter =
+        NumberFormat.currency(symbol: '$currency ', decimalDigits: digits);
+    return formatter.format(value);
+  }
+
+  String _formatUsd(double value, {int decimalDigits = 2}) {
+    final formatter =
+        NumberFormat.currency(symbol: 'USD ', decimalDigits: decimalDigits);
+    return formatter.format(value);
+  }
+
+  int _suggestUsdDecimalDigits(double value) {
+    if (value >= 1) {
+      return 2;
+    }
+    if (value >= 0.1) {
+      return 3;
+    }
+    if (value >= 0.01) {
+      return 4;
+    }
+    if (value >= 0.001) {
+      return 5;
+    }
+    return 6;
+  }
+
+  Widget _buildResultLine(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildResultSummaries() {
+    final result = _result!;
+    final String type = result['type'] as String;
+    final String currency = result['currency'] as String;
+    final double rate = result['rate'] as double;
+    final int years = result['years'] as int;
+
+    final List<Widget> details = [];
+
+    if (type == 'crypto' || type == 'stock') {
+      final quantity = result['quantity'] as double;
+      final currentPriceUsd = result['currentPriceUsd'] as double;
+      final futurePriceUsd = result['futurePriceUsd'] as double;
+      final currentValueUsd = result['currentValueUsd'] as double;
+      final futureValueUsd = result['futureValueUsd'] as double;
+
+      details.add(
+        _buildResultLine(
+          'Quantity',
+          '${_formatQuantity(quantity, currency)} $currency',
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Current Price (USD)',
+          _formatUsd(
+            currentPriceUsd,
+            decimalDigits: _suggestUsdDecimalDigits(currentPriceUsd),
+          ),
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Future Price (USD)',
+          _formatUsd(
+            futurePriceUsd,
+            decimalDigits: _suggestUsdDecimalDigits(futurePriceUsd),
+          ),
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Current Value (USD)',
+          _formatUsd(currentValueUsd),
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Future Value (USD)',
+          _formatUsd(futureValueUsd),
+        ),
+      );
+    } else if (type == 'fiat') {
+      final currentValueBase = result['currentValueBase'] as double;
+      final currentValueUsd = result['currentValueUsd'] as double;
+      final futureValueBase = result['futureValueBase'] as double;
+      final futureValueUsd = result['futureValueUsd'] as double;
+
+      details.add(
+        _buildResultLine(
+          'Current Value',
+          _formatCurrency(currentValueBase, currency),
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Current USD Value',
+          _formatUsd(currentValueUsd),
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Future Value',
+          _formatCurrency(futureValueBase, currency),
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Future USD Equivalent',
+          _formatUsd(futureValueUsd),
+        ),
+      );
+    } else {
+      final currentValue = result['currentValue'] as double;
+      final futureValue = result['futureValue'] as double;
+      details.add(
+        _buildResultLine(
+          'Current Value',
+          _formatCurrency(currentValue, currency),
+        ),
+      );
+      details.add(
+        _buildResultLine(
+          'Future Value',
+          _formatCurrency(futureValue, currency),
+        ),
+      );
+    }
+
+    details.add(const SizedBox(height: 12));
+    details.add(
+      Text(
+        'Assumes a ${rate.toStringAsFixed(2)}% CAGR over $years year${years == 1 ? '' : 's'}.',
+        style: TextStyle(
+          color: Colors.green.shade900,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+
+    return details;
+  }
+
+  void _reset() {
+    setState(() {
+      _amountController.text = '1';
+      _rateController.text = '30';
+      _yearsController.text = '5';
+      _selectedCurrency = 'BTC';
+      _errorMessage = null;
+      _result = null;
+    });
+  }
+
+  Future<Map<String, dynamic>> _deriveResult({
+    required double amount,
+    required double rate,
+    required int years,
+    required double growthFactor,
+    required String currency,
+  }) async {
+    if (_isCrypto(currency)) {
+      final currentPrice = await _apiService.fetchCryptoPrice(currency);
+      if (currentPrice == null) {
+        throw Exception('Failed to fetch current price for $currency');
+      }
+      final quantity = amount;
+      final futurePrice = currentPrice * growthFactor;
+      final currentValueUsd = quantity * currentPrice;
+      final futureValueUsd = quantity * futurePrice;
+
+      return {
+        'type': 'crypto',
+        'currency': currency,
+        'quantity': quantity,
+        'currentPriceUsd': currentPrice,
+        'futurePriceUsd': futurePrice,
+        'currentValueUsd': currentValueUsd,
+        'futureValueUsd': futureValueUsd,
+        'rate': rate,
+        'years': years,
+        'growthFactor': growthFactor,
+      };
+    }
+
+    if (_isStock(currency)) {
+      final currentPrice = await _apiService.fetchStockPrice(currency);
+      if (currentPrice == null) {
+        throw Exception('Failed to fetch current price for $currency');
+      }
+      final quantity = amount;
+      final futurePrice = currentPrice * growthFactor;
+      final currentValueUsd = quantity * currentPrice;
+      final futureValueUsd = quantity * futurePrice;
+
+      return {
+        'type': 'stock',
+        'currency': currency,
+        'quantity': quantity,
+        'currentPriceUsd': currentPrice,
+        'futurePriceUsd': futurePrice,
+        'currentValueUsd': currentValueUsd,
+        'futureValueUsd': futureValueUsd,
+        'rate': rate,
+        'years': years,
+        'growthFactor': growthFactor,
+      };
+    }
+
+    if (currency == 'USD') {
+      final currentValue = amount;
+      final futureValue = amount * growthFactor;
+
+      return {
+        'type': 'usd',
+        'currency': currency,
+        'currentValue': currentValue,
+        'futureValue': futureValue,
+        'futureValueUsd': futureValue,
+        'rate': rate,
+        'years': years,
+        'growthFactor': growthFactor,
+      };
+    }
+
+    final exchangeRates = await _apiService.fetchExchangeRates(currency);
+    final usdRate = exchangeRates['USD'];
+    if (usdRate == null) {
+      throw Exception('Unable to determine USD exchange rate for $currency');
+    }
+
+    final currentValueUsd = amount * usdRate;
+    final futureValueBase = amount * growthFactor;
+    final futureValueUsd = futureValueBase * usdRate;
+
+    return {
+      'type': 'fiat',
+      'currency': currency,
+      'currentValueBase': amount,
+      'currentValueUsd': currentValueUsd,
+      'futureValueBase': futureValueBase,
+      'futureValueUsd': futureValueUsd,
+      'usdRate': usdRate,
+      'rate': rate,
+      'years': years,
+      'growthFactor': growthFactor,
+    };
+  }
+
   Future<void> _calculate() async {
+    FocusScope.of(context).unfocus();
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -608,12 +959,12 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
     });
 
     try {
-      final amount = double.tryParse(_amountController.text);
-      final rate = double.tryParse(_rateController.text);
-      final years = int.tryParse(_yearsController.text);
+      final amount = _parseDouble(_amountController.text);
+      final rate = _parseDouble(_rateController.text);
+      final years = int.tryParse(_yearsController.text.trim());
 
       if (amount == null || amount <= 0) {
-        throw Exception('Please enter a valid positive amount');
+        throw Exception('Please enter a valid positive amount or quantity');
       }
       if (rate == null || rate < 0) {
         throw Exception('Please enter a valid non-negative rate');
@@ -622,68 +973,48 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         throw Exception('Please enter a valid positive number of years');
       }
 
-      double futureValue;
-      double usdEquivalent;
-      double? quantity;
+      final growthFactor = pow(1 + rate / 100, years).toDouble();
+      final selectedCurrency = _selectedCurrency;
 
-      // Calculate compound growth
-      final growthFactor = pow(1 + rate / 100, years);
-      futureValue = amount * growthFactor;
+      final result = await _deriveResult(
+        amount: amount,
+        rate: rate,
+        years: years,
+        growthFactor: growthFactor,
+        currency: selectedCurrency,
+      );
 
-      // Handle different currencies
-      if (_selectedCurrency == 'USD') {
-        usdEquivalent = futureValue;
-      } else if (['BTC', 'ETH'].contains(_selectedCurrency)) {
-        // Crypto: fetch current price
-        final currentPrice = await _apiService.fetchCryptoPrice(_selectedCurrency);
-        if (currentPrice == null) {
-          throw Exception('Failed to fetch current price for $_selectedCurrency');
-        }
-        quantity = amount / currentPrice;
-        final futurePrice = currentPrice * growthFactor;
-        futureValue = quantity * futurePrice;
-        usdEquivalent = futureValue;
-      } else if (_selectedCurrency == 'MSTR') {
-        // Stock: fetch current price
-        final currentPrice = await _apiService.fetchStockPrice(_selectedCurrency);
-        if (currentPrice == null) {
-          throw Exception('Failed to fetch current price for $_selectedCurrency');
-        }
-        quantity = amount / currentPrice;
-        final futurePrice = currentPrice * growthFactor;
-        futureValue = quantity * futurePrice;
-        usdEquivalent = futureValue;
-      } else {
-        // Fiat currency: convert to USD
-        final exchangeRates = await _apiService.fetchExchangeRates(_selectedCurrency);
-        final usdRate = exchangeRates['USD'] ?? 1.0;
-        usdEquivalent = futureValue / usdRate;
+      if (mounted) {
+        setState(() {
+          _result = result;
+        });
       }
-
-      setState(() {
-        _result = {
-          'futureValue': futureValue,
-          'usdEquivalent': usdEquivalent,
-          'quantity': quantity,
-          'currency': _selectedCurrency,
-          'amount': amount,
-          'rate': rate,
-          'years': years,
-        };
-      });
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = _friendlyError(e);
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isCrypto = _isCrypto(_selectedCurrency);
+    final bool isStock = _isStock(_selectedCurrency);
+    final bool isAsset = isCrypto || isStock;
+
+    final String amountLabel = isAsset ? 'Quantity Owned' : 'Beginning Amount';
+    final String? amountHelper = isAsset
+        ? 'Number of ${isStock ? 'shares' : 'units'} currently held'
+        : null;
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -697,26 +1028,30 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
             const SizedBox(height: 20),
             TextField(
               controller: _amountController,
-              decoration: const InputDecoration(
-                labelText: 'Beginning Amount',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: amountLabel,
+                helperText: amountHelper,
+                border: const OutlineInputBorder(),
+                suffixText: isAsset ? null : _selectedCurrency,
               ),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _rateController,
               decoration: const InputDecoration(
-                labelText: 'Annual Growth Rate (%)',
+                labelText: 'Annual Growth Rate',
+                suffixText: '%',
                 border: OutlineInputBorder(),
               ),
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _yearsController,
               decoration: const InputDecoration(
                 labelText: 'Number of Years',
+                suffixText: 'yrs',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
@@ -728,17 +1063,22 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
                 labelText: 'Currency/Asset',
                 border: OutlineInputBorder(),
               ),
-              items: _currencies.map((currency) {
-                return DropdownMenuItem(
-                  value: currency,
-                  child: Text(currency),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCurrency = value!;
-                });
-              },
+              items: _currencies
+                  .map(
+                    (currency) => DropdownMenuItem(
+                      value: currency,
+                      child: Text(currency),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _isLoading
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _selectedCurrency = value;
+                      });
+                    },
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -746,51 +1086,66 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _calculate,
                 child: _isLoading
-                    ? const CircularProgressIndicator()
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('Calculate'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : _reset,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reset'),
               ),
             ),
             if (_errorMessage != null) ...[
               const SizedBox(height: 20),
-              Text(
-                _errorMessage!,
-                style: const TextStyle(color: Colors.red),
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  _errorMessage!,
+                  style: TextStyle(
+                    color: Colors.red.shade900,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
             if (_result != null) ...[
               const SizedBox(height: 20),
-              const Text(
-                'Results:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Future Value: ${NumberFormat.currency(symbol: _result!['currency']).format(_result!['futureValue'])}',
-                        style: const TextStyle(fontSize: 16),
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Results',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade900,
                       ),
-                      if (_result!['quantity'] != null) ...[
-                        Text(
-                          'Quantity: ${NumberFormat('#,##0.########').format(_result!['quantity'])} ${_result!['currency']}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ],
-                      Text(
-                        'USD Equivalent: ${NumberFormat.currency(symbol: 'USD').format(_result!['usdEquivalent'])}',
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Based on ${_result!['amount']} ${_result!['currency']} growing at ${_result!['rate']}% annually for ${_result!['years']} years.',
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._buildResultSummaries(),
+                  ],
                 ),
               ),
             ],
@@ -892,6 +1247,15 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
     if (currentPrice == null) return 0.0;
     final buyPriceInBase = asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
     return (currentPrice - buyPriceInBase) * asset.quantity;
+  }
+
+  double _getProfitPercentage(Asset asset) {
+    if (asset.type == AssetType.cash) return 0.0;
+    final currentPrice = _currentPrices[asset.symbol];
+    if (currentPrice == null) return 0.0;
+    final buyPriceInBase = asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
+    if (buyPriceInBase == 0) return 0.0;
+    return ((currentPrice - buyPriceInBase) / buyPriceInBase) * 100;
   }
 
   List<PieChartSectionData> _generatePieSections(List<Asset> assets) {
@@ -1196,11 +1560,12 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                             final asset = box.getAt(index)!;
                             final value = _getAssetValue(asset);
                             final profit = _getProfit(asset);
+                            final profitPercentage = _getProfitPercentage(asset);
                             final profitColor = profit >= 0 ? Colors.green : Colors.red;
                             return ListTile(
                               title: Text('${asset.symbol.toUpperCase()} (${asset.quantity})'),
                               subtitle: Text(
-                                'Value: ${formatCurrency.format(value)}${asset.type != AssetType.cash ? '\nProfit: ${formatCurrency.format(profit)}' : ''}',
+                                'Value: ${formatCurrency.format(value)}${asset.type != AssetType.cash ? '\nProfit: ${formatCurrency.format(profit)} (${profitPercentage >= 0 ? '+' : ''}${profitPercentage.toStringAsFixed(2)}%)' : ''}',
                                 style: asset.type != AssetType.cash ? TextStyle(color: profitColor) : null,
                               ),
                               isThreeLine: asset.type != AssetType.cash,

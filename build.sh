@@ -11,7 +11,7 @@ set -euo pipefail
 ACTION=${1:-android}
 ARG2=${2:-}
 ARG3=${3:-}
-UPLOAD_URL="http://192.168.1.174:8080/"
+UPLOAD_URL="http://192.168.1.170:8080/"
 
 export ANDROID_SDK_ROOT=$HOME/Library/Android/sdk
 export ANDROID_HOME=$ANDROID_SDK_ROOT
