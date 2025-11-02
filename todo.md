@@ -1,5 +1,4 @@
-- [ ] Check current git status
-- [ ] Add all untracked files to git
-- [ ] Commit any changes with appropriate message
-- [ ] Push to remote repository
-- [ ] Verify push was successful
+- [x] Update portfolio tracker currency formatting to remove decimals
+- [x] Remove unused profit helper methods and related variables
+- [x] Format asset quantities without decimals in portfolio list
+- [x] Re-run flutter analyze

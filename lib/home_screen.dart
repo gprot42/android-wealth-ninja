@@ -1323,24 +1323,6 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
     return asset.quantity * currentPrice;
   }
 
-  double _getProfit(Asset asset) {
-    if (asset.type == AssetType.cash) return 0.0;
-    final currentPrice = _currentPrices[asset.symbol];
-    if (currentPrice == null) return 0.0;
-    final buyPriceInBase =
-        asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
-    return (currentPrice - buyPriceInBase) * asset.quantity;
-  }
-
-  double _getProfitPercentage(Asset asset) {
-    if (asset.type == AssetType.cash) return 0.0;
-    final currentPrice = _currentPrices[asset.symbol];
-    if (currentPrice == null) return 0.0;
-    final buyPriceInBase =
-        asset.buyPrice / (_exchangeRates[asset.currency] ?? 1.0);
-    if (buyPriceInBase == 0) return 0.0;
-    return ((currentPrice - buyPriceInBase) / buyPriceInBase) * 100;
-  }
 
   List<PieChartSectionData> _generatePieSections(List<Asset> assets) {
     final double totalValue =
@@ -1626,7 +1608,10 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final formatCurrency = NumberFormat.simpleCurrency(name: _baseCurrency);
+    final formatCurrency = NumberFormat.simpleCurrency(
+      name: _baseCurrency,
+      decimalDigits: 0,
+    );
 
     return Scaffold(
       body: Column(
@@ -1714,22 +1699,16 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
                           itemBuilder: (context, index) {
                             final asset = assets[index];
                             final value = _getAssetValue(asset);
-                            final profit = _getProfit(asset);
-                            final profitPercentage =
-                                _getProfitPercentage(asset);
-                            final profitColor =
-                                profit >= 0 ? Colors.green : Colors.red;
+                            final quantityDisplay =
+                                asset.quantity.toStringAsFixed(0);
                             return ListTile(
                               title: Text(
-                                '${asset.symbol.toUpperCase()}${asset.type == AssetType.cash && (asset.cashNote?.isNotEmpty ?? false) ? ' (${asset.cashNote})' : ''} (${asset.quantity})',
+                                '${asset.symbol.toUpperCase()}${asset.type == AssetType.cash && (asset.cashNote?.isNotEmpty ?? false) ? ' (${asset.cashNote})' : ''} ($quantityDisplay)',
                               ),
                               subtitle: Text(
-                                'Value: ${formatCurrency.format(value)}${asset.type != AssetType.cash ? '\nProfit: ${formatCurrency.format(profit)} (${profitPercentage >= 0 ? '+' : ''}${profitPercentage.toStringAsFixed(2)}%)' : ''}',
-                                style: asset.type != AssetType.cash
-                                    ? TextStyle(color: profitColor)
-                                    : null,
+                                'Value: ${formatCurrency.format(value)}',
                               ),
-                              isThreeLine: asset.type != AssetType.cash,
+                              isThreeLine: false,
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
