@@ -1,0 +1,5 @@
+- [ ] Check current git status
+- [ ] Add all untracked files to git
+- [ ] Commit any changes with appropriate message
+- [ ] Push to remote repository
+- [ ] Verify push was successful
