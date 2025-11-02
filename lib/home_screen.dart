@@ -7,6 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'api_service.dart';
 import 'settings_service.dart';
+import 'currency_converter_screen.dart';
 import 'main.dart' show Asset, AssetType;
 
 class HomeScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -241,6 +242,7 @@ class _HomeScreenState extends State<HomeScreen>
             Tab(text: 'Stocks'),
             Tab(text: 'Portfolio'),
             Tab(text: 'Calculator'),
+            Tab(text: 'Currency'),
           ],
         ),
       ),
@@ -251,6 +253,7 @@ class _HomeScreenState extends State<HomeScreen>
           StockTrackerScreen(),
           PortfolioTrackerScreen(),
           CompoundCalculatorScreen(),
+          CurrencyConverterScreen(),
         ],
       ),
     );
@@ -377,7 +380,17 @@ class _CryptoTrackerScreenState extends State<CryptoTrackerScreen> {
     return Scaffold(
       body: Column(
         children: [
-          if (_isLoading) const LinearProgressIndicator(),
+          if (_isLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: _box.listenable(),
@@ -552,7 +565,17 @@ class _StockTrackerScreenState extends State<StockTrackerScreen> {
     return Scaffold(
       body: Column(
         children: [
-          if (_isLoading) const LinearProgressIndicator(),
+          if (_isLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: _box.listenable(),
@@ -1608,7 +1631,17 @@ class _PortfolioTrackerScreenState extends State<PortfolioTrackerScreen> {
     return Scaffold(
       body: Column(
         children: [
-          if (_isLoading) const LinearProgressIndicator(),
+          if (_isLoading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: _box.listenable(),

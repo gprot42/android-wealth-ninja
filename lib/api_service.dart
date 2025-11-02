@@ -25,6 +25,104 @@ class ApiService {
   final Map<String, CacheEntry<double>> _priceCache = {};
   final Map<String, CacheEntry<Map<String, double>>> _exchangeRateCache = {};
   static const Duration _cacheDuration = Duration(seconds: 60);
+
+  static const Map<String, double> _fallbackStockPrices = {
+    'AAPL': 182.35,
+    'MSFT': 414.32,
+    'GOOGL': 152.22,
+    'AMZN': 174.55,
+    'TSLA': 198.12,
+    'NVDA': 825.23,
+    'META': 473.11,
+    'IBM': 161.28,
+    'NFLX': 593.44,
+    'MSTR': 982.67,
+  };
+
+  static const Map<String, double> _fallbackCryptoPrices = {
+    'BTC': 92500.00,
+    'ETH': 2800.50,
+    'SOL': 105.30,
+    'ADA': 0.58,
+    'XRP': 0.63,
+    'DOGE': 0.18,
+    'MSTR': 982.67,
+    'BNB': 362.15,
+    'LTC': 85.42,
+    'AVAX': 41.70,
+  };
+
+  static const Map<String, Map<String, double>> _fallbackExchangeRates = {
+    'CHF': {
+      'USD': 1.14,
+      'EUR': 1.02,
+      'GBP': 0.86,
+      'JPY': 170.10,
+      'CNY': 8.20,
+      'SGD': 1.55,
+      'AED': 4.20,
+      'PHP': 73.03,
+      'KRW': 1540.00,
+      'MXN': 19.90,
+      'NZD': 1.87,
+      'AUD': 1.72,
+      'ARS': 992.00,
+      'COP': 4525.00,
+      'RUB': 121.00,
+      'ZAR': 20.80,
+      'LKR': 367.00,
+      'IDR': 17850.00,
+      'CAD': 1.56,
+      'SEK': 11.20,
+    },
+  };
+
+  Map<String, double> _mergeWithFallback(
+    String baseCurrency,
+    Map<String, double>? providedRates,
+  ) {
+    final normalizedBase = baseCurrency.toUpperCase();
+    final Map<String, double> merged =
+        providedRates != null ? Map<String, double>.from(providedRates) : <String, double>{};
+
+    merged[normalizedBase] = 1.0;
+
+    final chfFallback = _fallbackExchangeRates['CHF'];
+
+    if (chfFallback != null) {
+      if (normalizedBase == 'CHF') {
+        chfFallback.forEach((code, value) {
+          merged.putIfAbsent(code.toUpperCase(), () => value);
+        });
+        merged['CHF'] = 1.0;
+      } else if (chfFallback.containsKey(normalizedBase)) {
+        final double? baseFactor = chfFallback[normalizedBase];
+        if (baseFactor != null && baseFactor > 0) {
+          chfFallback.forEach((code, value) {
+            final upper = code.toUpperCase();
+            if (upper == normalizedBase) {
+              merged[upper] = 1.0;
+            } else {
+              merged.putIfAbsent(upper, () => value / baseFactor);
+            }
+          });
+          merged.putIfAbsent('CHF', () => 1.0 / baseFactor);
+        } else {
+          chfFallback.forEach((code, value) {
+            merged.putIfAbsent(code.toUpperCase(), () => value);
+          });
+        }
+      } else {
+        chfFallback.forEach((code, value) {
+          merged.putIfAbsent(code.toUpperCase(), () => value);
+        });
+      }
+    }
+
+    merged.removeWhere((key, value) => value.isNaN || value.isInfinite);
+
+    return merged;
+  }
   
   // Top 1000 Crypto Symbol-to-ID Map
   static const Map<String, String> _cryptoSymbolToIdMap = {
@@ -733,7 +831,9 @@ class ApiService {
     // Fetch from API
     try {
       final url = Uri.parse('https://query1.finance.yahoo.com/v8/finance/chart/$symbol?range=1d&interval=1m');
-      final response = await http.get(url, headers: {'User-Agent': 'Mozilla/5.0'});
+      final response = await http
+          .get(url, headers: {'User-Agent': 'Mozilla/5.0'})
+          .timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -750,6 +850,13 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('Error fetching Yahoo price for $symbol: $e');
+    }
+
+    final fallback = _fallbackStockPrices[symbol.toUpperCase()];
+    if (fallback != null) {
+      debugPrint('Using fallback stock price for $symbol: $fallback');
+      _priceCache[cacheKey] = CacheEntry(fallback);
+      return fallback;
     }
     
     return null;
@@ -786,16 +893,24 @@ class ApiService {
     // Cache the result if successful
     if (price != null) {
       _priceCache[cacheKey] = CacheEntry(price);
+      return price;
+    }
+
+    final fallback = _fallbackCryptoPrices[symbol.toUpperCase()];
+    if (fallback != null) {
+      debugPrint('Using fallback crypto price for $symbol: $fallback');
+      _priceCache[cacheKey] = CacheEntry(fallback);
+      return fallback;
     }
     
-    return price;
+    return null;
   }
   
   // CoinGecko API
   Future<double?> _fetchFromCoinGecko(String coinId) async {
     try {
       final url = Uri.parse('https://api.coingecko.com/api/v3/simple/price?ids=$coinId&vs_currencies=usd');
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -813,7 +928,7 @@ class ApiService {
   Future<double?> _fetchFromCoinCap(String symbol) async {
     try {
       final url = Uri.parse('https://api.coincap.io/v2/assets?search=$symbol');
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -836,7 +951,7 @@ class ApiService {
   Future<double?> _fetchFromCryptoCompare(String symbol) async {
     try {
       final url = Uri.parse('https://min-api.cryptocompare.com/data/price?fsym=$symbol&tsyms=USD');
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -852,7 +967,8 @@ class ApiService {
   
   // Fetch exchange rates with caching
   Future<Map<String, double>> fetchExchangeRates(String baseCurrency) async {
-    final cacheKey = 'rates_$baseCurrency';
+    final normalizedBase = baseCurrency.toUpperCase();
+    final cacheKey = 'rates_$normalizedBase';
     
     // Check cache first
     if (_exchangeRateCache.containsKey(cacheKey)) {
@@ -863,16 +979,27 @@ class ApiService {
     }
     
     try {
-      final response = await http.get(Uri.parse('https://api.frankfurter.app/latest?from=$baseCurrency'));
+      final response = await http
+          .get(Uri.parse('https://api.exchangerate.host/latest?base=$normalizedBase'))
+          .timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final rates = Map<String, double>.from(data['rates'])
-          ..[data['base']] = 1.0;
-        
+        Map<String, double>? apiRates;
+        final dynamic rawRates = data['rates'];
+        if (rawRates is Map) {
+          apiRates = rawRates.map<String, double>((dynamic key, dynamic value) {
+            final String upper = key.toString().toUpperCase();
+            final double parsedValue =
+                value is num ? value.toDouble() : double.tryParse(value.toString()) ?? double.nan;
+            return MapEntry(upper, parsedValue);
+          });
+        }
+
+        final merged = _mergeWithFallback(normalizedBase, apiRates);
         // Cache the result
-        _exchangeRateCache[cacheKey] = CacheEntry(rates);
-        return rates;
+        _exchangeRateCache[cacheKey] = CacheEntry(merged);
+        return merged;
       } else {
         debugPrint('Exchange rate API failed: ${response.statusCode} - ${response.reasonPhrase}');
       }
@@ -880,8 +1007,14 @@ class ApiService {
       debugPrint('Error fetching exchange rates: $e');
     }
     
+    final mergedFallback = _mergeWithFallback(normalizedBase, null);
+    if (mergedFallback.length > 1 || mergedFallback.containsKey(normalizedBase)) {
+      _exchangeRateCache[cacheKey] = CacheEntry(mergedFallback);
+      return mergedFallback;
+    }
+
     // Return default rates if API fails
-    return {baseCurrency: 1.0};
+    return {normalizedBase: 1.0};
   }
   
   // Clear cache (useful for testing or force refresh)

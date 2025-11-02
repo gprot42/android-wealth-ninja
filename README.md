@@ -16,7 +16,7 @@
 
 ## 🛠️ How It Works
 
-* **Data Sources:** Prices are fetched from reliable APIs: `Yahoo Finance` for stocks, `CoinGecko` for cryptocurrencies, and `Frankfurter.app` for currency conversions.
+* **Data Sources:** Prices are fetched from reliable APIs: `Yahoo Finance` for stocks, `CoinGecko` for cryptocurrencies, and `exchangerate.host` for currency conversions, with a CHF-denominated fallback table to ensure rates are always available even if the external service is unreachable.
 * **Compound Calculations:** The calculator uses the formula `FV = PV × (1 + r)^n` where FV is future value, PV is present value, r is the annual growth rate, and n is the number of years. For crypto and stocks, it fetches current prices to calculate quantities and project future values.
 * **Local Storage:** All your data is saved locally on your device, ensuring offline access and data persistence between sessions.
 * **Dynamic Updates:** Easily add or remove items through simple dialogs. Prices auto-refresh to keep you informed.
@@ -48,6 +48,7 @@ For cryptocurrencies and stocks, the calculator fetches current market prices to
 * Flutter SDK (3.0.0 or higher)
 * Android Studio (for Android builds) or Xcode (for iOS builds)
 * For Android: Android SDK with proper environment variables set
+* Ruby toolchain (via `rbenv` or system Ruby) with CocoaPods available for iOS/macOS targets
 
 ### Build Commands
 ```bash
@@ -66,6 +67,28 @@ For cryptocurrencies and stocks, the calculator fetches current market prices to
 # Run in development mode
 flutter run
 ```
+
+### macOS CocoaPods Setup
+
+If you encounter pod-related errors when building on macOS, reinstall CocoaPods under a supported Ruby version:
+
+```bash
+# Ensure ruby-build is current
+brew upgrade ruby-build
+
+# Install a recent Ruby and set it globally (example: 3.3.10)
+rbenv install 3.3.10
+rbenv global 3.3.10
+
+# Install CocoaPods and refresh shims
+gem install cocoapods
+rbenv rehash
+
+# Verify the installation
+pod --version
+```
+
+After the Ruby/CocoaPods environment is ready, rerun `flutter run -d macos` or `./build.sh macos`.
 
 ### APK Output
 Release builds are automatically copied to `~/Downloads/wealth-ninja-release.apk`
