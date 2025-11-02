@@ -6,11 +6,11 @@
 
 ## 🚀 Key Features
 
-* **Price Tracker:** Add stocks or cryptocurrencies to your watchlist to monitor their current prices, updated every minute.
-* **Portfolio Tracker:** Log your owned assets with details like quantity and purchase price. Instantly see your portfolio's total value, profits/losses, and an allocation pie chart.
-* **Compound Calculator:** Project future investment values using Compound Annual Growth Rate (CAGR) calculations. Supports multiple currencies and assets including USD, CHF, GBP, BTC, ETH, MSTR with real-time price integration.
-* **Customization:** Switch between light and dark themes, change your preferred display currency (e.g., USD to EUR), and view an "About" page.
-* **Splash Screen:** A welcoming 3-second splash screen greets you on app launch before loading the main interface.
+1. **Crypto Tracker:** Monitor real-time cryptocurrency prices with automatic refresh intervals, add favourites to a watchlist, and view each asset in your chosen base currency.
+2. **Stock Tracker:** Search and follow equities with live Yahoo Finance pricing, track day moves, and maintain a separate watchlist focused on the stock market.
+3. **Portfolio Manager:** Record holdings (crypto, stocks, and cash) with quantity, buy price, and currency to get instant valuation, profit/loss, and allocation pie charts.
+4. **Compound Calculator:** Project future value using CAGR with dynamic price lookups for BTC, ETH, MSTR, and fiat currencies—perfect for “what-if” planning scenarios.
+5. **Currency Converter:** Compare exchange rates across major currencies using exchangerate.host, backed by CHF-based fallbacks so rates remain visible even if APIs are unavailable.
 
 ---
 
