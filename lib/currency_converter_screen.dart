@@ -188,7 +188,7 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
                       title: Text('$currencyCode - ${_getCurrencyName(currencyCode)}'),
                       trailing: Text(
                         '${_formatCurrency(rate, currencyCode)} $currencyCode',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                     ),
                   );

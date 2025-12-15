@@ -13,7 +13,7 @@ ARG2=${2:-}
 ARG3=${3:-}
 ARG4=${4:-}
 ARG5=${5:-}
-UPLOAD_URL="http://192.168.1.170:8080/"
+UPLOAD_URL="http://192.168.1.217:8080/"
 
 export ANDROID_SDK_ROOT=$HOME/Library/Android/sdk
 export ANDROID_HOME=$ANDROID_SDK_ROOT

@@ -654,9 +654,12 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
       TextEditingController(text: '5');
 
   String _selectedCurrency = 'BTC';
+  String _compoundingFrequency = 'yearly';
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _result;
+
+  final List<String> _compoundingOptions = ['daily', 'weekly', 'monthly', 'yearly'];
 
   final List<String> _currencies = [
     'BTC',
@@ -790,7 +793,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
     final String type = result['type'] as String;
     final String currency = result['currency'] as String;
     final double rate = result['rate'] as double;
-    final int years = result['years'] as int;
+    final int periods = result['years'] as int;
+    final String periodName = result['periodName'] as String;
 
     final List<Widget> details = [];
 
@@ -895,10 +899,57 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
       );
     }
 
+    // Calculate growth breakdown
+    double currentValueUsd = 0;
+    double futureValueUsd = 0;
+
+    if (type == 'crypto' || type == 'stock') {
+      currentValueUsd = result['currentValueUsd'] as double;
+      futureValueUsd = result['futureValueUsd'] as double;
+    } else if (type == 'fiat') {
+      currentValueUsd = result['currentValueUsd'] as double;
+      futureValueUsd = result['futureValueUsd'] as double;
+    } else {
+      currentValueUsd = result['currentValue'] as double;
+      futureValueUsd = result['futureValue'] as double;
+    }
+
+    final double totalGain = futureValueUsd - currentValueUsd;
+    final double perPeriod = totalGain / periods;
+
+    final String periodPlural = periods == 1 ? periodName : '${periodName}s';
+
+    details.add(const SizedBox(height: 16));
+    details.add(
+      Text(
+        'Growth Breakdown (USD)',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: accentColor,
+        ),
+      ),
+    );
+    details.add(const SizedBox(height: 8));
+    details.add(
+      _buildResultLine(
+        'Total Gain',
+        _formatUsd(totalGain, decimalDigits: _suggestUsdDecimalDigits(totalGain)),
+        textColor,
+      ),
+    );
+    details.add(
+      _buildResultLine(
+        'Per ${periodName[0].toUpperCase()}${periodName.substring(1)} ($periods $periodPlural)',
+        _formatUsd(perPeriod, decimalDigits: _suggestUsdDecimalDigits(perPeriod)),
+        textColor,
+      ),
+    );
+
     details.add(const SizedBox(height: 12));
     details.add(
       Text(
-        'Assumes a ${rate.toStringAsFixed(2)}% CAGR over $years year${years == 1 ? '' : 's'}.',
+        'Assumes a ${rate.toStringAsFixed(2)}% $_compoundingFrequency rate over $periods $periodPlural.',
         style: TextStyle(
           color: accentColor,
           fontStyle: FontStyle.italic,
@@ -915,6 +966,7 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
       _rateController.text = '30';
       _yearsController.text = '5';
       _selectedCurrency = 'BTC';
+      _compoundingFrequency = 'yearly';
       _errorMessage = null;
       _result = null;
     });
@@ -926,6 +978,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
     required int years,
     required double growthFactor,
     required String currency,
+    required int periodsPerYear,
+    required String periodName,
   }) async {
     if (_isCrypto(currency)) {
       final currentPrice = await _apiService.fetchCryptoPrice(currency);
@@ -948,6 +1002,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         'rate': rate,
         'years': years,
         'growthFactor': growthFactor,
+        'periodsPerYear': periodsPerYear,
+        'periodName': periodName,
       };
     }
 
@@ -972,6 +1028,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         'rate': rate,
         'years': years,
         'growthFactor': growthFactor,
+        'periodsPerYear': periodsPerYear,
+        'periodName': periodName,
       };
     }
 
@@ -988,6 +1046,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         'rate': rate,
         'years': years,
         'growthFactor': growthFactor,
+        'periodsPerYear': periodsPerYear,
+        'periodName': periodName,
       };
     }
 
@@ -1012,6 +1072,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
       'rate': rate,
       'years': years,
       'growthFactor': growthFactor,
+      'periodsPerYear': periodsPerYear,
+      'periodName': periodName,
     };
   }
 
@@ -1035,10 +1097,32 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         throw Exception('Please enter a valid non-negative rate');
       }
       if (years == null || years <= 0) {
-        throw Exception('Please enter a valid positive number of years');
+        throw Exception('Please enter a valid positive number of periods');
       }
 
-      final growthFactor = pow(1 + rate / 100, years).toDouble();
+      int periodsPerYear;
+      String periodName;
+      switch (_compoundingFrequency) {
+        case 'daily':
+          periodsPerYear = 365;
+          periodName = 'day';
+          break;
+        case 'weekly':
+          periodsPerYear = 52;
+          periodName = 'week';
+          break;
+        case 'monthly':
+          periodsPerYear = 12;
+          periodName = 'month';
+          break;
+        default:
+          periodsPerYear = 1;
+          periodName = 'year';
+      }
+
+      final totalPeriods = years;
+      final ratePerPeriod = rate / 100;
+      final growthFactor = pow(1 + ratePerPeriod, totalPeriods).toDouble();
       final selectedCurrency = _selectedCurrency;
 
       final result = await _deriveResult(
@@ -1047,6 +1131,8 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         years: years,
         growthFactor: growthFactor,
         currency: selectedCurrency,
+        periodsPerYear: periodsPerYear,
+        periodName: periodName,
       );
 
       if (mounted) {
@@ -1093,6 +1179,31 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
         ? 'Number of ${isStock ? 'shares' : 'units'} currently held'
         : null;
 
+    String periodLabel;
+    String periodSuffix;
+    String rateLabel;
+    switch (_compoundingFrequency) {
+      case 'daily':
+        periodLabel = 'Number of Days';
+        periodSuffix = 'days';
+        rateLabel = 'Daily Growth Rate';
+        break;
+      case 'weekly':
+        periodLabel = 'Number of Weeks';
+        periodSuffix = 'wks';
+        rateLabel = 'Weekly Growth Rate';
+        break;
+      case 'monthly':
+        periodLabel = 'Number of Months';
+        periodSuffix = 'mos';
+        rateLabel = 'Monthly Growth Rate';
+        break;
+      default:
+        periodLabel = 'Number of Years';
+        periodSuffix = 'yrs';
+        rateLabel = 'Yearly Growth Rate';
+    }
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -1118,10 +1229,10 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _rateController,
-              decoration: const InputDecoration(
-                labelText: 'Annual Growth Rate',
+              decoration: InputDecoration(
+                labelText: rateLabel,
                 suffixText: '%',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
@@ -1129,16 +1240,40 @@ class _CompoundCalculatorScreenState extends State<CompoundCalculatorScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _yearsController,
-              decoration: const InputDecoration(
-                labelText: 'Number of Years',
-                suffixText: 'yrs',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: periodLabel,
+                suffixText: periodSuffix,
+                border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: _selectedCurrency,
+              value: _compoundingFrequency,
+              decoration: const InputDecoration(
+                labelText: 'Compounding Frequency',
+                border: OutlineInputBorder(),
+              ),
+              items: _compoundingOptions
+                  .map(
+                    (freq) => DropdownMenuItem(
+                      value: freq,
+                      child: Text(freq[0].toUpperCase() + freq.substring(1)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _isLoading
+                  ? null
+                  : (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _compoundingFrequency = value;
+                      });
+                    },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedCurrency,
               decoration: const InputDecoration(
                 labelText: 'Currency/Asset',
                 border: OutlineInputBorder(),
