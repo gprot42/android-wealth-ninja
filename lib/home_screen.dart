@@ -163,6 +163,39 @@ class _HomeScreenState extends State<HomeScreen>
                       ],
                     ),
                   ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.upload_file),
+                    title: const Text('Export Settings'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final filePath = await _settingsService.shareExport();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(
+                          content: Text('Saved to: $filePath'),
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.download),
+                    title: const Text('Import Settings'),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final success = await _settingsService.importFromFile();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        SnackBar(
+                          content: Text(success 
+                            ? 'Settings imported successfully' 
+                            : 'Failed to import settings'),
+                        ),
+                      );
+                      if (success) setState(() {});
+                    },
+                  ),
                 ],
               );
             },

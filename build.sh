@@ -1,10 +1,11 @@
 #!/bin/bash
 # Unified Flutter build script for Android (APK), iOS, macOS, or pushing builds.
-# Usage: ./build.sh [android|ios|macos|push] [options]
+# Usage: ./build.sh [android|ios|macos|push|--release] [options]
 # android: [debug|release] [push] (skips upload by default, add 'push' to enable)
 # ios: no additional options
 # macos: no additional options
 # push: <file_path> [ip_address_or_url] [port]  (manually uploads a specified file, optionally overriding the upload target and TCP port)
+# --release: Build release APK and publish to GitHub as a new release
 set -euo pipefail
 
 # --- Configuration ---
@@ -25,6 +26,45 @@ APK_RELEASE="${ANDROID_OUTPUT_DIR}/app-release.apk"
 APK_DEBUG="${ANDROID_OUTPUT_DIR}/app-debug.apk"
 
 # --- Functions ---
+get_version() {
+  grep "version:" pubspec.yaml | head -1 | sed 's/version: //' | tr -d ' '
+}
+
+github_release() {
+  local apk_path=$1
+  local version
+  version=$(get_version)
+  local tag="v${version}"
+  local release_name="Release ${version}"
+  local apk_name="wealth-ninja-${version}.apk"
+  
+  if ! command -v gh &> /dev/null; then
+    echo "Error: GitHub CLI (gh) is not installed." >&2
+    echo "Install it with: brew install gh" >&2
+    exit 1
+  fi
+  
+  if ! gh auth status &> /dev/null; then
+    echo "Error: Not authenticated with GitHub CLI." >&2
+    echo "Run: gh auth login" >&2
+    exit 1
+  fi
+  
+  echo "Creating GitHub release ${tag}..."
+  
+  if gh release view "$tag" &> /dev/null; then
+    echo "Release ${tag} already exists. Uploading APK to existing release..."
+    gh release upload "$tag" "$apk_path#${apk_name}" --clobber
+  else
+    gh release create "$tag" "$apk_path#${apk_name}" \
+      --title "$release_name" \
+      --notes "Release ${version}" \
+      --latest
+  fi
+  
+  echo "GitHub release published: ${tag}"
+  gh release view "$tag" --web || true
+}
 clean() {
   echo "Running flutter clean..."
   flutter clean
@@ -135,14 +175,15 @@ if ! command -v flutter &> /dev/null; then
 fi
 
 # Validate action
-if [[ "$ACTION" != "android" && "$ACTION" != "ios" && "$ACTION" != "macos" && "$ACTION" != "push" ]]; then
+if [[ "$ACTION" != "android" && "$ACTION" != "ios" && "$ACTION" != "macos" && "$ACTION" != "push" && "$ACTION" != "--release" ]]; then
   cat <<EOF
-Error: Invalid action '$ACTION'. Use 'android', 'ios', 'macos', or 'push'.
+Error: Invalid action '$ACTION'. Use 'android', 'ios', 'macos', 'push', or '--release'.
 Usage:
   $0 android [debug|release] [push [ip_address_or_url] [port]] # default: release
   $0 ios
   $0 macos
   $0 push <file_path> [ip_address_or_url] [port]
+  $0 --release  # Build release APK and publish to GitHub
 EOF
   exit 1
 fi
@@ -272,6 +313,21 @@ case "$ACTION" in
     if ! push_file "$FILE_TO_PUSH" "$TARGET_ENDPOINT" "$TARGET_PORT"; then
         exit 1
     fi
+    ;;
+
+  --release)
+    clean
+    echo "Building release APK for GitHub..."
+    flutter build apk --release --verbose
+    
+    if [[ ! -f "$APK_RELEASE" ]]; then
+      echo "Error: Release APK not found at '$APK_RELEASE'." >&2
+      exit 1
+    fi
+    
+    ls -l "$APK_RELEASE"
+    echo "Build successful. Publishing to GitHub..."
+    github_release "$APK_RELEASE"
     ;;
 esac
 

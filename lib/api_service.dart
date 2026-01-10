@@ -54,26 +54,26 @@ class ApiService {
 
   static const Map<String, Map<String, double>> _fallbackExchangeRates = {
     'CHF': {
-      'USD': 1.14,
-      'EUR': 1.02,
-      'GBP': 0.86,
-      'JPY': 170.10,
-      'CNY': 8.20,
-      'SGD': 1.55,
-      'AED': 4.20,
-      'PHP': 73.03,
-      'KRW': 1540.00,
-      'MXN': 19.90,
-      'NZD': 1.87,
-      'AUD': 1.72,
-      'ARS': 992.00,
-      'COP': 4525.00,
-      'RUB': 121.00,
-      'ZAR': 20.80,
-      'LKR': 367.00,
-      'IDR': 17850.00,
-      'CAD': 1.56,
-      'SEK': 11.20,
+      'USD': 1.25,
+      'EUR': 1.07,
+      'GBP': 0.93,
+      'JPY': 197.04,
+      'CNY': 8.73,
+      'SGD': 1.61,
+      'AED': 4.59,
+      'PHP': 74.01,
+      'KRW': 1824.73,
+      'MXN': 22.53,
+      'NZD': 2.18,
+      'AUD': 1.87,
+      'ARS': 1320.00,
+      'COP': 5200.00,
+      'RUB': 135.00,
+      'ZAR': 20.72,
+      'LKR': 380.00,
+      'IDR': 21074.00,
+      'CAD': 1.74,
+      'SEK': 11.54,
     },
   };
 
@@ -980,7 +980,7 @@ class ApiService {
     
     try {
       final response = await http
-          .get(Uri.parse('https://api.exchangerate.host/latest?base=$normalizedBase'))
+          .get(Uri.parse('https://api.frankfurter.app/latest?from=$normalizedBase'))
           .timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
