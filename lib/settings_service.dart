@@ -126,11 +126,12 @@ class SettingsService {
     };
   }
 
-  Future<String> exportToFile() async {
+  static const String defaultConfigFilename = 'wealth_ninja_settings.json';
+
+  Future<String> exportToFile({String? filename}) async {
     final json = exportToJson();
     final jsonString = const JsonEncoder.withIndent('  ').convert(json);
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final filename = 'wealth_ninja_backup_$timestamp.json';
+    final exportFilename = filename ?? defaultConfigFilename;
     
     String dirPath;
     if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
@@ -143,7 +144,7 @@ class SettingsService {
       dirPath = (await getApplicationDocumentsDirectory()).path;
     }
     
-    final file = File('$dirPath/$filename');
+    final file = File('$dirPath/$exportFilename');
     await file.writeAsString(jsonString);
     return file.path;
   }
