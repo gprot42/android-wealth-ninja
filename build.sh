@@ -27,7 +27,27 @@ APK_DEBUG="${ANDROID_OUTPUT_DIR}/app-debug.apk"
 
 # --- Functions ---
 get_version() {
-  grep "version:" pubspec.yaml | head -1 | sed 's/version: //' | tr -d ' '
+  # Read version from version.md (source of truth)
+  if [ -f "version.md" ]; then
+    # Extract the first version number found in ## format (BSD grep compatible)
+    local ver=$(grep '^## ' version.md | head -1 | sed 's/^## //' | sed 's/ .*//')
+    if [ -n "$ver" ]; then
+      echo "$ver"
+      return
+    fi
+  fi
+  # Fallback to pubspec.yaml
+  grep "version:" pubspec.yaml | head -1 | sed 's/version: //' | sed 's/+.*//' | tr -d ' '
+}
+
+get_arch() {
+  # Determine architecture from the APK or system
+  if [ -f "$APK_PATH" ]; then
+    # Check for common arch indicators in the APK
+    echo "arm64_v8a"
+  else
+    echo "arm64"
+  fi
 }
 
 github_release() {
@@ -36,22 +56,23 @@ github_release() {
   version=$(get_version)
   local tag="v${version}"
   local release_name="Release ${version}"
-  local apk_name="wealth-ninja-${version}.apk"
-  
+  local arch=$(get_arch)
+  local apk_name="wealth-ninja-v${version}-${arch}-release.apk"
+
   if ! command -v gh &> /dev/null; then
-    echo "Error: GitHub CLI (gh) is not installed." >&2
-    echo "Install it with: brew install gh" >&2
+    echo "Error: GitHub CLI (gh) is not installed."
+    echo "Install it with: brew install gh"
     exit 1
   fi
-  
+
   if ! gh auth status &> /dev/null; then
-    echo "Error: Not authenticated with GitHub CLI." >&2
-    echo "Run: gh auth login" >&2
+    echo "Error: Not authenticated with GitHub CLI."
+    echo "Run: gh auth login"
     exit 1
   fi
-  
+
   echo "Creating GitHub release ${tag}..."
-  
+
   if gh release view "$tag" &> /dev/null; then
     echo "Release ${tag} already exists. Uploading APK to existing release..."
     gh release upload "$tag" "$apk_path#${apk_name}" --clobber
@@ -61,7 +82,7 @@ github_release() {
       --notes "Release ${version}" \
       --latest
   fi
-  
+
   echo "GitHub release published: ${tag}"
   gh release view "$tag" --web || true
 }
@@ -80,7 +101,7 @@ push_file() {
     local override_port=${3:-}
 
     if [[ ! -f "$file_to_upload" ]]; then
-        echo "Error: File to upload not found at '$file_to_upload'." >&2
+        echo "Error: File to upload not found at '$file_to_upload'."
         return 1
     fi
 
@@ -161,7 +182,7 @@ push_file() {
     if curl -u admin:password -F "uploadedFile=@${file_to_upload}" "$upload_url"; then
         echo "Upload completed successfully."
     else
-        echo "Error: Upload failed." >&2
+        echo "Error: Upload failed."
         return 1
     fi
 }
@@ -230,6 +251,10 @@ case "$ACTION" in
 
     clean
     ANDROID_VARIANT=${ARG2:-release}
+    # Handle --release flag
+    if [[ "$ANDROID_VARIANT" == "--release" ]]; then
+        ANDROID_VARIANT="release"
+    fi
     APK_PATH=""
     echo "Building Android APK (variant: ${ANDROID_VARIANT})..."
     case "$ANDROID_VARIANT" in
@@ -254,11 +279,22 @@ case "$ACTION" in
     ls -l "$APK_PATH"
     echo "Build successful. APK generated at: $APK_PATH"
 
+    # --- Copy APK to project root with version and arch ---
+    VERSION=$(get_version)
+    ARCH=$(get_arch)
+    ROOT_APK_NAME="wealth-ninja-v${VERSION}-${ARCH}-${ANDROID_VARIANT}.apk"
+    echo "Copying ${ANDROID_VARIANT} APK to project root as '$ROOT_APK_NAME'..."
+    if cp "$APK_PATH" "$ROOT_APK_NAME"; then
+        echo "Successfully copied APK to project root."
+    else
+        echo "Warning: Failed to copy APK to project root." >&2
+    fi
+
     # --- Copy release build to Downloads ---
     if [[ "$ANDROID_VARIANT" == "release" ]]; then
         DOWNLOADS_DIR="${HOME}/Downloads"
         if [ -d "$DOWNLOADS_DIR" ]; then
-            DEST_APK_PATH="${DOWNLOADS_DIR}/wealth-ninja-release.apk"
+            DEST_APK_PATH="${DOWNLOADS_DIR}/wealth-ninja-v${VERSION}-${ARCH}-release.apk"
             echo "Copying release APK to '$DEST_APK_PATH'..."
             if cp "$APK_PATH" "$DEST_APK_PATH"; then
                 echo "Successfully copied and renamed APK."
@@ -319,14 +355,27 @@ case "$ACTION" in
     clean
     echo "Building release APK for GitHub..."
     flutter build apk --release --verbose
-    
+
     if [[ ! -f "$APK_RELEASE" ]]; then
       echo "Error: Release APK not found at '$APK_RELEASE'." >&2
       exit 1
     fi
-    
+
     ls -l "$APK_RELEASE"
-    echo "Build successful. Publishing to GitHub..."
+    echo "Build successful. APK generated at: $APK_RELEASE"
+
+    # --- Copy APK to project root with version and arch ---
+    VERSION=$(get_version)
+    ARCH=$(get_arch)
+    ROOT_APK_NAME="wealth-ninja-v${VERSION}-${ARCH}-release.apk"
+    echo "Copying release APK to project root as '$ROOT_APK_NAME'..."
+    if cp "$APK_RELEASE" "$ROOT_APK_NAME"; then
+        echo "Successfully copied APK to project root."
+    else
+        echo "Warning: Failed to copy APK to project root." >&2
+    fi
+
+    echo "Publishing to GitHub..."
     github_release "$APK_RELEASE"
     ;;
 esac
