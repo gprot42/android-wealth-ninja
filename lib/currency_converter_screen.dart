@@ -15,15 +15,15 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
   final ApiService _apiService = ApiService();
   final TextEditingController _amountController = TextEditingController(text: '1');
   
-  String _fromCurrency = 'CHF';
+  String _fromCurrency = 'USD';
   String _toCurrency = 'USD';
   Map<String, double> _exchangeRates = {};
   bool _isLoading = false;
   
   final List<String> _currencies = [
-    'AED', 'ARS', 'AUD', 'CHF', 'CNY', 'COP', 'EUR', 'GBP', 
-    'IDR', 'JPY', 'KRW', 'LKR', 'MXN', 'NZD', 'PHP', 'RUB', 
-    'SGD', 'USD', 'ZAR',
+    'AED', 'ARS', 'AUD', 'BRL', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'EUR', 'GBP', 
+    'IDR', 'INR', 'JPY', 'KRW', 'KHR', 'LKR', 'MYR', 'MXN', 'NZD', 'PHP', 'RUB',
+    'SGD', 'THB', 'TRY', 'USD', 'UYU', 'VND', 'ZAR',
   ];
 
   @override
@@ -54,21 +54,31 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
       'AED': 'UAE Dirham',
       'ARS': 'Argentine Peso',
       'AUD': 'Australian Dollar',
+      'BRL': 'Brazilian Real',
+      'CAD': 'Canadian Dollar',
       'CHF': 'Swiss Franc',
+      'CLP': 'Chilean Peso',
       'CNY': 'Chinese Yuan',
       'COP': 'Colombian Peso',
       'EUR': 'Euro',
       'GBP': 'British Pound',
       'IDR': 'Indonesian Rupiah',
+      'INR': 'Indian Rupee',
       'JPY': 'Japanese Yen',
       'KRW': 'Korean Won',
+      'KHR': 'Cambodian Riel',
       'LKR': 'Sri Lankan Rupee',
+      'MYR': 'Malaysian Ringgit',
       'MXN': 'Mexican Peso',
       'NZD': 'New Zealand Dollar',
       'PHP': 'Philippine Peso',
       'RUB': 'Russian Ruble',
       'SGD': 'Singapore Dollar',
+      'THB': 'Thai Baht',
+      'TRY': 'Turkish Lira',
       'USD': 'US Dollar',
+      'UYU': 'Uruguayan Peso',
+      'VND': 'Vietnamese Dong',
       'ZAR': 'South African Rand',
     };
     return names[code] ?? code;
@@ -76,7 +86,7 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
 
   String _formatResult(double value, String code) {
     if (value == 0) return '0';
-    if (code == 'JPY' || code == 'KRW' || code == 'IDR') {
+    if (code == 'JPY' || code == 'KRW' || code == 'IDR' || code == 'KHR' || code == 'CLP' || code == 'VND') {
       return value.toStringAsFixed(0).replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
     }
@@ -96,7 +106,6 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
       final temp = _fromCurrency;
       _fromCurrency = _toCurrency;
       _toCurrency = temp;
-      _settingsService.setBaseCurrency(_fromCurrency);
     });
     _fetchExchangeRates();
   }
@@ -163,18 +172,17 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
                         ),
                         title: Text(_getCurrencyName(code)),
                         trailing: selected ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary) : null,
-                        onTap: () {
-                          setState(() {
-                            if (isFrom) {
-                              _fromCurrency = code;
-                              _settingsService.setBaseCurrency(code);
-                              _fetchExchangeRates();
-                            } else {
-                              _toCurrency = code;
-                            }
-                          });
-                          Navigator.pop(context);
-                        },
+                         onTap: () {
+                           setState(() {
+                             if (isFrom) {
+                               _fromCurrency = code;
+                               _fetchExchangeRates();
+                             } else {
+                               _toCurrency = code;
+                             }
+                           });
+                           Navigator.pop(context);
+                         },
                       );
                     },
                   ),

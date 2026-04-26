@@ -28,7 +28,7 @@ class SettingsService {
   
   // Currency settings
   String getBaseCurrency() {
-    return _settingsBox.get('baseCurrency', defaultValue: 'CHF') as String;
+    return _settingsBox.get('baseCurrency', defaultValue: 'USD') as String;
   }
   
   Future<void> setBaseCurrency(String currency) async {
