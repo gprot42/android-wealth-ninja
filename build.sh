@@ -42,7 +42,7 @@ get_version() {
 
 get_arch() {
   # Determine architecture from the APK or system
-  if [ -f "$APK_PATH" ]; then
+  if [ -f "${APK_PATH:-}" ]; then
     # Check for common arch indicators in the APK
     echo "arm64_v8a"
   else
