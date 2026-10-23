@@ -8,7 +8,7 @@ import 'settings_service.dart';
 
 /// Amounts listed on the reference card, in the "From" currency.
 const List<double> referenceAmounts = [
-  1, 25, 100, 500, 1000, 25000, 50000, 100000, 250000, 500000, 1000000,
+  1, 25, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000,
 ];
 
 /// Optional per-currency amounts that replace [referenceAmounts] for that "From" currency.
