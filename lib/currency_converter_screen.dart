@@ -11,8 +11,20 @@ const List<double> referenceAmounts = [
   1, 25, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000,
 ];
 
+/// Amounts for currencies where 1 unit is worth very little (thousands per USD).
+const List<double> largeUnitReferenceAmounts = [
+  1000, 5000, 10000, 20000, 50000, 100000, 250000, 500000,
+  1000000, 2500000, 5000000, 10000000, 25000000, 50000000, 100000000,
+];
+
 /// Optional per-currency amounts that replace [referenceAmounts] for that "From" currency.
-const Map<String, List<double>> referenceAmountsByCurrency = {};
+const Map<String, List<double>> referenceAmountsByCurrency = {
+  'IDR': largeUnitReferenceAmounts,
+  'VND': largeUnitReferenceAmounts,
+  'KHR': largeUnitReferenceAmounts,
+  'KRW': largeUnitReferenceAmounts,
+  'COP': largeUnitReferenceAmounts,
+};
 
 /// Symbols shown before amounts; currencies not listed fall back to their code.
 const Map<String, String> currencySymbols = {
