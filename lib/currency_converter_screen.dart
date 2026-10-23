@@ -3,6 +3,37 @@ import 'package:flutter/services.dart';
 import 'api_service.dart';
 import 'settings_service.dart';
 
+// Reference card shown under the converter for the selected currency pair.
+// Edit these to change which amounts are listed and how currencies are labelled.
+
+/// Amounts listed on the reference card, in the "From" currency.
+const List<double> referenceAmounts = [
+  1, 25, 100, 500, 1000, 25000, 50000, 100000, 250000, 500000, 1000000,
+];
+
+/// Optional per-currency amounts that replace [referenceAmounts] for that "From" currency.
+const Map<String, List<double>> referenceAmountsByCurrency = {};
+
+/// Symbols shown before amounts; currencies not listed fall back to their code.
+const Map<String, String> currencySymbols = {
+  'USD': '\$',
+  'PHP': '₱',
+  'THB': '฿',
+  'EUR': '€',
+  'GBP': '£',
+  'JPY': '¥',
+  'CNY': '¥',
+  'INR': '₹',
+  'KRW': '₩',
+  'VND': '₫',
+  'IDR': 'Rp',
+  'MYR': 'RM',
+  'SGD': 'S\$',
+  'AUD': 'A\$',
+  'CAD': 'C\$',
+  'NZD': 'NZ\$',
+};
+
 class CurrencyConverterScreen extends StatefulWidget {
   const CurrencyConverterScreen({super.key});
 
@@ -47,6 +78,52 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  String _withSymbol(double value, String code) {
+    final symbol = currencySymbols[code];
+    final formatted = _formatResult(value, code);
+    return symbol == null ? '$formatted $code' : '$symbol$formatted';
+  }
+
+  Widget _buildReferenceCard(ThemeData theme) {
+    final rate = _isLoading ? null : _exchangeRates[_toCurrency];
+    final amounts = referenceAmountsByCurrency[_fromCurrency] ?? referenceAmounts;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '$_fromCurrency → $_toCurrency',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          for (final amount in amounts)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _withSymbol(amount, _fromCurrency),
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                  ),
+                  Text(
+                    rate == null ? '—' : _withSymbol(amount * rate, _toCurrency),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   String _getCurrencyName(String code) {
@@ -356,6 +433,11 @@ class _CurrencyConverterScreenState extends State<CurrencyConverterScreen> {
                     style: TextStyle(color: Colors.grey[600], fontSize: 14),
                   ),
                 ),
+
+              if (_fromCurrency != _toCurrency) ...[
+                const SizedBox(height: 24),
+                _buildReferenceCard(theme),
+              ],
             ],
           ),
         ),
